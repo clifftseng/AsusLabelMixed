@@ -1,0 +1,4 @@
+openai
+azure-ai-formrecognizer
+python-dotenv
+PyMuPDF

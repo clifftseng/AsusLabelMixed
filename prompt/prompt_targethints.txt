@@ -1,0 +1,22 @@
+
+以下Target Hints的JSON:
+
+{
+  "version": "1.0",
+  "prompt_file": "prompt_target_v0.1.md",
+  "spec_name": "BSMI Cert.md",
+  "page_indexing": "absolute_1_based",
+  "bbox_spec": {
+    "units": "pt",
+    "origin": "top_left",
+    "format": "xywh"
+  },
+  "hints": [
+    { "field": "model_name",           "page": 2, "bbox": [120, 530, 420, 60] },
+    { "field": "nominal_voltage_v",    "page": 5, "bbox": [120, 530, 420, 60] },
+    { "field": "typ_batt_capacity_wh", "page": 6, "bbox": [120, 530, 420, 60] },
+    { "field": "typ_capacity_mah",     "page": 6, "bbox": [120, 460, 420, 60] },
+    { "field": "rated_capacity_mah",   "page": 5, "bbox": [120, 470, 420, 60] },
+    { "field": "rated_energy_wh",      "page": 6, "bbox": [120, 400, 420, 60] }
+  ]
+}

@@ -1,0 +1,8 @@
+請根據系統提示詞的規則，檢查下面要抽取的欄位，並按照規則輸出JSON。
+
+- model_name（型號 / Model name）
+- nominal_voltage_v（正常電壓 / Nominal voltage，單位 V）
+- typ_batt_capacity_wh（典型/正常電池容量，Wh）
+- typ_capacity_mah（典型/正常容量，mAh）
+- rated_capacity_mah（額定容量，mAh）
+- rated_energy_wh（額定能量，Wh）
