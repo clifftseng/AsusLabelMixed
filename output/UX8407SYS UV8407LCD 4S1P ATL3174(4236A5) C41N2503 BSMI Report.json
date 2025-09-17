@@ -1,0 +1,90 @@
+{
+    "file": {
+        "name": "CCC Report.pdf",
+        "source": "CQC",
+        "page_count": 8
+    },
+    "language": "zh",
+    "model_name": {
+        "value": "C41N2503",
+        "raw_value": "C41N2503",
+        "evidence": [
+            {
+                "page": 1,
+                "loc": "測試項目 / 型號規格",
+                "quote": "型號規格.................................: C41N2503"
+            }
+        ]
+    },
+    "nominal_voltage_v": {
+        "value": 15.6,
+        "raw_value": "15.6 Vdc",
+        "derived_value": null,
+        "evidence": [
+            {
+                "page": 1,
+                "loc": "測試項目 / 電氣規格",
+                "quote": "額定電壓: 15.6 Vdc, 額定容量: 3082 mAh"
+            },
+            {
+                "page": 5,
+                "loc": "電池組技術參數表",
+                "quote": "標稱電壓 15.6 V"
+            }
+        ]
+    },
+    "typ_batt_capacity_wh": {
+        "value": null,
+        "raw_value": null,
+        "derived_value": 48.0792,
+        "evidence": [
+            {
+                "page": 1,
+                "loc": "測試項目 / 電氣規格",
+                "quote": "額定電壓: 15.6 Vdc, 額定容量: 3082 mAh"
+            }
+        ]
+    },
+    "typ_capacity_mah": {
+        "value": null,
+        "raw_value": null,
+        "derived_value": null,
+        "evidence": []
+    },
+    "rated_capacity_mah": {
+        "value": 3082,
+        "raw_value": "3082 mAh",
+        "derived_value": null,
+        "evidence": [
+            {
+                "page": 1,
+                "loc": "測試項目 / 電氣規格",
+                "quote": "額定電壓: 15.6 Vdc, 額定容量: 3082 mAh"
+            },
+            {
+                "page": 5,
+                "loc": "電池組技術參數表",
+                "quote": "額定容量 3082 mAh"
+            },
+            {
+                "page": 22,
+                "loc": "7.3.1 在20°C下之放電性能（額定容量）",
+                "quote": "額定容量 (mAh) 3082"
+            }
+        ]
+    },
+    "rated_energy_wh": {
+        "value": null,
+        "raw_value": null,
+        "derived_value": 48.0792,
+        "evidence": [
+            {
+                "page": 1,
+                "loc": "測試項目 / 電氣規格",
+                "quote": "額定電壓: 15.6 Vdc, 額定容量: 3082 mAh"
+            }
+        ]
+    },
+    "conflicts": [],
+    "notes": "文件主要語言為中文。典型容量與典型能量未提供。額定能量與典型能量可由額定電壓與額定容量換算得出：Wh = V × mAh / 1000 = 15.6 × 3082 / 1000 = 48.0792 Wh。"
+}

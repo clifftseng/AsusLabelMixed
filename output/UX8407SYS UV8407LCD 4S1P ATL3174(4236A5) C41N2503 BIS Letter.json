@@ -1,0 +1,51 @@
+{
+    "file": {
+        "name": "CCC Report.pdf",
+        "source": "CQC",
+        "page_count": 8
+    },
+    "language": "en",
+    "model_name": {
+        "value": "C41N2503",
+        "raw_value": "Models => C41N2503",
+        "evidence": [
+            {
+                "page": 1,
+                "loc": "Table row: Inclusion of Additional Models",
+                "quote": "[Brand => ASUS, Models => C41N2503]"
+            }
+        ]
+    },
+    "nominal_voltage_v": {
+        "value": null,
+        "raw_value": null,
+        "derived_value": null,
+        "evidence": []
+    },
+    "typ_batt_capacity_wh": {
+        "value": null,
+        "raw_value": null,
+        "derived_value": null,
+        "evidence": []
+    },
+    "typ_capacity_mah": {
+        "value": null,
+        "raw_value": null,
+        "derived_value": null,
+        "evidence": []
+    },
+    "rated_capacity_mah": {
+        "value": null,
+        "raw_value": null,
+        "derived_value": null,
+        "evidence": []
+    },
+    "rated_energy_wh": {
+        "value": null,
+        "raw_value": null,
+        "derived_value": null,
+        "evidence": []
+    },
+    "conflicts": [],
+    "notes": "文件僅提供型號資訊，未包含電壓、容量或能量數據，無法填寫其他欄位。"
+}
