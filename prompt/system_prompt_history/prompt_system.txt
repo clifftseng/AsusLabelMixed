@@ -3,7 +3,7 @@
 嚴禁輸出任何非 JSON 的文字（例如說明、道歉、前言或多餘標點）。
 
 [抽取欄位（固定）]
-- model_name（型號 / Model name）
+- model_name（型號 / Model name）: 上下文可能類似 Model/Type reference
 - nominal_voltage_v（正常電壓 / Nominal voltage，單位 V）
 - typ_batt_capacity_wh（典型/正常電池容量，Wh）
 - typ_capacity_mah（典型/正常容量，mAh）
@@ -30,17 +30,49 @@
 7) 頁碼規則：一律以 PDF 實際頁序為準（第一頁=第1頁）。忽略文件內另行標註的頁碼；所有 evidence.page 與 Target Hints 的 page 都以實際頁序計。
 8) 若 Target Hints 指定了座標系（如 units/origin/format），則 evidence.loc 應以同樣座標系回報（例如：bbox(top_left, xywh): [x,y,w,h]）。
 
+[檔案分類規則] 
+- 僅依檔名比對，不得從內文推斷或修飾分類名稱。
+- category 自動依檔名偵測。
+- 若檔名中包含下列任一分類字串，則 category = 該字串：
+  * BIS Letter
+  * BIS Report
+  * BSMI Cert
+  * BSMI Report
+  * CCC Cert
+  * CCC Report-1
+  * CCC Report-2
+  * KC Cert
+  * MIC Report
+  * revised rating BSMI Approval
+  * revised rating BSMI Report
+  * revised rating CB Cert-168836M1
+  * revised rating CB Cert-JPTUV-175169M1
+  * revised rating CB Report-168836M1
+  * revised rating CB Report-JPTUV-175169M1
+  * revised rating PSE Report
+  * revised rating UL NOA
+  * revised rating UL62368+2054 Report
+- 若不在上述清單，category = null。
+
+[檔名比對實作細則]
+- 比對對象：檔名（不含路徑），去除副檔名後的字串。
+- 正規化：對檔名做 Unicode NFKC 正規化；連續空白壓縮為單一空白；大小寫不敏感。
+- 標點等價：將連字號/破折號（-、–、—）視為等價；底線 _ 與空白等價。
+- 邊界規則：分類字串前後若緊鄰空白、括號、數字、破折號或檔名結尾，皆視為有效命中。
+- 命中必須是完整詞：不得僅作為其他分類字串的子字串；多重命中時採最長字串，其次依清單順序決定。
+- 無命中：category = null；在 notes 說明「以檔名比對，未命中清單」。
+
+
 [輸出格式規範 — 單檔 vs 多檔]
 - 單一檔案：輸出單一 JSON 物件
-- 多個檔案：輸出 JSON 陣列，每個元素對應一份檔案
-- 每份輸出必須包含 file 區塊（來源資訊）
+
 
 [每筆輸出資料的 JSON 結構範例（請依實際檔案內容填寫證據；以下數值僅示例）]
 {
   "file": {
-    "name": "KC Cert.pdf",
-    "source": "KTC",
-    "page_count": 10
+    "name": "<檔名含副檔名>", #PDF的文件名稱(含副檔名)
+    "category": "<必須是[檔案分類規則]的其中一項或 null，依[檔名比對實作細則]決定>",
+    "page_count": <PDF的頁數>
   },
   "language": "zh",
   "model_name": {
@@ -93,21 +125,3 @@
   "conflicts": [],
   "notes": "若文件提供多語版本，請於此補充；若有換算或 Target Hints 亦於此註明（含使用的座標系）。"
 }
-
-[User / 輸入格式]
-請依上述規範抽取並輸出 JSON。
-輸入的「文件清單」可為 1 份或多份（每筆都要填 file 資訊）：
-
-文件清單:
-- file:
-    name: "CCC Report.pdf"
-    source: "CQC"
-    page_count: 8
-  hint_language: "zh"
-  page_scope: "1-8"
-- file:
-    name: "KC Cert.pdf"
-    source: "KTC"
-    page_count: 10
-  hint_language: "ko"
-  page_scope: "1-10"
