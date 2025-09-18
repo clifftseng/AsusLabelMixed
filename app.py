@@ -72,11 +72,11 @@ def read_prompt_file(file_path):
 
 # --- Excel Helper Functions ---
 def get_display_value(data_dict):
-    """Gets the value to display in Excel, prioritizing raw_value, then derived_value."""
+    """Gets the value to display in Excel, prioritizing value, then derived_value."""
     if not isinstance(data_dict, dict):
         return "無"
-    if data_dict.get("raw_value"):
-        return data_dict["raw_value"]
+    if data_dict.get("value"):
+        return data_dict["value"]
     if data_dict.get("derived_value") is not None:
         return f"{data_dict['derived_value']} (推論)"
     return "無"
