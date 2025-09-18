@@ -403,85 +403,60 @@ def method_llm_with_label():
                 else:
                     print("  - 警告: JSON 中沒有 'hints' 列表或其為空，跳過圖片切割。")
                 
-            except Exception as e:
-                print(f"  - 處理檔案 '{pdf_filename}' 時發生錯誤: {e}")
+                # --- Action 3: Call Azure OpenAI and save JSON ---
+                print(f"--- 正在為文件 '{pdf_base_name}' 準備 Azure OpenAI 請求 ---")
+
+                # Collect all PNG images in the subdirectory
+                image_files = [f for f in os.listdir(pdf_output_subdir) if f.lower().endswith(".png")]
+                if not image_files:
+                    print(f"  - 在 '{pdf_output_subdir}' 中找不到任何圖片檔案，跳過 Azure OpenAI 請求。")
+                    continue
+
+                base64_images_for_aoai = []
+                for img_file in image_files:
+                    img_path = os.path.join(pdf_output_subdir, img_file)
+                    base64_img = image_file_to_base64(img_path)
+                    if base64_img:
+                        base64_images_for_aoai.append(base64_img)
+                
+                if not base64_images_for_aoai:
+                    print(f"  - 無法編碼 '{pdf_output_subdir}' 中的任何圖片，跳過 Azure OpenAI 請求。")
+                    continue
+
+                # Construct user content for OpenAI call
+                user_content_aoai = [{"type": "text", "text": "請根據提供的圖片，提取所有相關資訊，並以 JSON 格式回應。"}]
+                user_content_aoai.extend([{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}} for img in base64_images_for_aoai])
+
+                try:
+                    print(f"  - 正在向 Azure OpenAI 發送請求 ({len(base64_images_for_aoai)} 張圖片)... ")
+                    response = client.chat.completions.create(
+                        model=AZURE_OPENAI_DEPLOYMENT_NAME,
+                        messages=[
+                            {"role": "system", "content": system_prompt_aoai},
+                            {"role": "user", "content": user_content_aoai}
+                        ],
+                        max_tokens=4096, temperature=0.1, top_p=0.95, response_format={"type": "json_object"}
+                    )
+                    aoai_json_response = json.loads(response.choices[0].message.content)
+                    print("  - 成功收到 Azure OpenAI 回應。")
+
+                    # Save the response JSON
+                    output_json_filename = f"{pdf_base_name}_with_label.json"
+                    output_json_path = os.path.join(pdf_output_subdir, output_json_filename)
+                    with open(output_json_path, "w", encoding="utf-8") as f:
+                        json.dump(aoai_json_response, f, ensure_ascii=False, indent=4)
+                    print(f"  - 已儲存 Azure OpenAI 回應: {output_json_filename}")
+
+                except Exception as e:
+                    print(f"  - 呼叫 Azure OpenAI API 或處理回應時發生錯誤: {e}")
+                
             finally:
                 if doc: # Ensure doc is closed if it was opened
                     doc.close()
         else:
             print(f"\n- 檔案 '{pdf_filename}' 未匹配到任何格式，已跳過。")
 
-
-    print("\n--- 圖片處理完成，開始呼叫 Azure OpenAI ---")
-
-    # Initialize Azure OpenAI client
-    client = AzureOpenAI(
-        api_key=AZURE_OPENAI_API_KEY,
-        api_version=AZURE_OPENAI_API_VERSION,
-        azure_endpoint=AZURE_OPENAI_ENDPOINT
-    )
-    system_prompt_aoai_path = os.path.join(PROMPT_DIR, "prompt_system_using_label.txt")
-    system_prompt_aoai = read_prompt_file(system_prompt_aoai_path)
-
-    if not system_prompt_aoai:
-        print(f"錯誤：找不到或無法讀取 Azure OpenAI 的系統提示檔案 {system_prompt_aoai_path}，程式終止。")
-        return
-
-    # Iterate through the created output subdirectories to send images to AOAI
-    processed_doc_dirs = [d for d in os.listdir(OUTPUT_DIR) if os.path.isdir(os.path.join(OUTPUT_DIR, d)) and d != "excel"]
-    if not processed_doc_dirs:
-        print(f"在 {OUTPUT_DIR} 中找不到任何已處理的文件子目錄。")
-        return
-
-    for doc_dir_name in processed_doc_dirs:
-        doc_output_path = os.path.join(OUTPUT_DIR, doc_dir_name)
-        print(f"--- 正在為文件 '{doc_dir_name}' 準備 Azure OpenAI 請求 ---")
-
-        # Collect all PNG images in the subdirectory
-        image_files = [f for f in os.listdir(doc_output_path) if f.lower().endswith(".png")]
-        if not image_files:
-            print(f"  - 在 '{doc_output_path}' 中找不到任何圖片檔案，跳過 Azure OpenAI 請求。")
-            continue
-
-        base64_images_for_aoai = []
-        for img_file in image_files:
-            img_path = os.path.join(doc_output_path, img_file)
-            base64_img = image_file_to_base64(img_path)
-            if base64_img:
-                base64_images_for_aoai.append(base64_img)
-        
-        if not base64_images_for_aoai:
-            print(f"  - 無法編碼 '{doc_output_path}' 中的任何圖片，跳過 Azure OpenAI 請求。")
-            continue
-
-        # Construct user content for OpenAI call
-        user_content_aoai = [{"type": "text", "text": "請根據提供的圖片，提取所有相關資訊，並以 JSON 格式回應。"}]
-        user_content_aoai.extend([{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}} for img in base64_images_for_aoai])
-
-        try:
-            print(f"  - 正在向 Azure OpenAI 發送請求 ({len(base64_images_for_aoai)} 張圖片)... ")
-            response = client.chat.completions.create(
-                model=AZURE_OPENAI_DEPLOYMENT_NAME,
-                messages=[
-                    {"role": "system", "content": system_prompt_aoai},
-                    {"role": "user", "content": user_content_aoai}
-                ],
-                max_tokens=4096, temperature=0.1, top_p=0.95, response_format={"type": "json_object"}
-            )
-            aoai_json_response = json.loads(response.choices[0].message.content)
-            print("  - 成功收到 Azure OpenAI 回應。")
-
-            # Save the response JSON
-            output_json_filename = f"{doc_dir_name}_with_label.json"
-            output_json_path = os.path.join(doc_output_path, output_json_filename)
-            with open(output_json_path, "w", encoding="utf-8") as f:
-                json.dump(aoai_json_response, f, ensure_ascii=False, indent=4)
-            print(f"  - 已儲存 Azure OpenAI 回應: {output_json_filename}")
-
-        except Exception as e:
-            print(f"  - 呼叫 Azure OpenAI API 或處理回應時發生錯誤: {e}")
-
-    print("\n--- 所有 Azure OpenAI 請求處理完畢 ---")
+    print("\n--- 所有檔案處理完畢 ---\n--- 圖片處理任務完成 ---")
 
 
 if __name__ == "__main__":
