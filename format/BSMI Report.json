@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "prompt_file": "prompt_target_v0.1.md",
+  "width": 1654,
+  "height": 2339,
+  "page_indexing": "absolute_1_based",
+  "bbox_spec": {
+    "units": "px",
+    "origin": "top_left",
+    "format": "xywh"
+  },
+  "hints": [
+    {
+      "field": "model_name",
+      "page": 1,
+      "bbox": [
+        608,
+        1988,
+        163,
+        66
+      ]
+    },
+    {
+      "field": "nominal_voltage_v",
+      "page": 5,
+      "bbox": [
+        791,
+        1201,
+        141,
+        56
+      ]
+    },
+    {
+      "field": "typ_batt_capacity_wh",
+      "page": 5,
+      "bbox": [
+        783,
+        1150,
+        168,
+        51
+      ]
+    }
+  ],
+  "spec_name": "BSMI Report.md"
+}

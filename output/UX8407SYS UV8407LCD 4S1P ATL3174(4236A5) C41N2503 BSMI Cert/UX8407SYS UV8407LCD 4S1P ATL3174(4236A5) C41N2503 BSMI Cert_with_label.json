@@ -1,0 +1,21 @@
+{
+    "certificate_no": "C145406065B663",
+    "classification_code": "00",
+    "applicant": "新普科技股份有限公司",
+    "uniform_no": "86620351",
+    "address": "新竹縣湖口鄉湖口村八德路2段471號",
+    "factory": "詳如附表",
+    "factory_address": "詳如附表",
+    "product_type_name": {
+        "ccc_code": "8507.60.00.90-0-A",
+        "chinese_name": "二次鋰電池組",
+        "english_name": "C41N2503"
+    },
+    "type": "C41N2503",
+    "series_of_type": "空白",
+    "standards": "CNS15364 (102年版)",
+    "registration_date": "2025-07-24",
+    "expiration_date": "2028-07-23",
+    "date_of_issue": "2025-07-24",
+    "identification_no": "R45065"
+}

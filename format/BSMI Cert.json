@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "prompt_file": "prompt_target_v0.1.md",
+  "width": 3903,
+  "height": 5523,
+  "page_indexing": "absolute_1_based",
+  "bbox_spec": {
+    "units": "px",
+    "origin": "top_left",
+    "format": "xywh"
+  },
+  "hints": [
+    {
+      "field": "model_name",
+      "page": 1,
+      "bbox": [
+        883,
+        3268,
+        575,
+        219
+      ]
+    }
+  ],
+  "spec_name": "BSMI Cert.md"
+}

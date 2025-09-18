@@ -8,6 +8,7 @@ from openai import AzureOpenAI
 from dotenv import load_dotenv
 import fitz  # PyMuPDF
 from openpyxl import load_workbook
+from PIL import Image
 
 # --- Configuration ---
 # Load environment variables from .env file
@@ -61,6 +62,15 @@ def pdf_to_base64_images(pdf_path):
         return None
     return images
 
+def image_file_to_base64(image_path):
+    """Encodes an image file to a base64 string."""
+    try:
+        with open(image_path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+    except Exception as e:
+        print(f"錯誤：讀取或編碼圖片檔案 '{os.path.basename(image_path)}' 時發生錯誤: {e}")
+        return None
+
 def read_prompt_file(file_path):
     """Reads content from a prompt file."""
     try:
@@ -97,7 +107,7 @@ def format_conflicts(conflicts_list):
     return json.dumps(conflicts_list, ensure_ascii=False, indent=2)
 
 # --- Main Logic ---
-def main():
+def method_purellm():
     """Main function to process PDFs, query Azure OpenAI, and generate Excel reports incrementally."""
 
     # 1. Initial Setup
@@ -242,5 +252,243 @@ def main():
 
     print("\n--- 所有檔案處理完畢 ---")
 
+# --- Image Processing Logic (New) ---
+
+def method_llm_with_label():
+    """
+    Processes PDF files based on matching JSON formats, generates images,
+    then sends processed images to Azure OpenAI for labeling.
+    """
+    print("--- 開始根據 format JSON 處理圖片並呼叫 Azure OpenAI ---")
+
+    # Ensure output directory exists
+    if not os.path.exists(OUTPUT_DIR):
+        os.makedirs(OUTPUT_DIR)
+        print(f"已建立 output 目錄: {OUTPUT_DIR}")
+
+    # 1. Create a case-insensitive map of format names to their file paths
+    format_dir = os.path.join(BASE_DIR, "format")
+    try:
+        format_files = [f for f in os.listdir(format_dir) if f.lower().endswith('.json')]
+        format_map = {os.path.splitext(f)[0].lower(): os.path.join(format_dir, f) for f in format_files}
+        print(f"成功載入 {len(format_map)} 個 format JSON 檔案。")
+    except FileNotFoundError:
+        print(f"錯誤: 找不到 format 目錄: {format_dir}")
+        return
+
+    # Initialize Azure OpenAI client and read system prompt once
+    client = AzureOpenAI(
+        api_key=AZURE_OPENAI_API_KEY,
+        api_version=AZURE_OPENAI_API_VERSION,
+        azure_endpoint=AZURE_OPENAI_ENDPOINT
+    )
+    system_prompt_aoai_path = os.path.join(PROMPT_DIR, "prompt_system_using_label.txt")
+    system_prompt_aoai = read_prompt_file(system_prompt_aoai_path)
+
+    if not system_prompt_aoai:
+        print(f"錯誤：找不到或無法讀取 Azure OpenAI 的系統提示檔案 {system_prompt_aoai_path}，程式終止。")
+        return
+
+    # 2. Iterate through PDF files in the user_input directory
+    pdf_files = [f for f in os.listdir(USER_INPUT_DIR) if f.lower().endswith(".pdf")]
+    if not pdf_files:
+        print(f"在 {USER_INPUT_DIR} 中找不到任何 PDF 檔案。")
+        return
+
+    print(f"找到 {len(pdf_files)} 個 PDF 檔案，開始進行比對與處理...")
+
+    for pdf_filename in pdf_files:
+        pdf_base_name = os.path.splitext(pdf_filename)[0]
+        matched_format_key = None
+
+        # Find a matching format key within the PDF filename
+        for format_key in format_map.keys():
+            # Use a regex to match the format key as a whole word/phrase
+            # This is more robust than simple 'in' for matching categories like "BIS Letter"
+            if re.search(r'\b' + re.escape(format_key) + r'\b', pdf_filename, re.IGNORECASE):
+                matched_format_key = format_key
+                break
+        
+        if not matched_format_key:
+            # Fallback to simple 'in' if regex doesn't find a clear word boundary match
+            # This might catch cases where the format key is part of a larger word
+            for format_key in format_map.keys():
+                if format_key in pdf_filename.lower():
+                    matched_format_key = format_key
+                    break
+
+        if matched_format_key:
+            print(f"\n- 處理檔案 '{pdf_filename}' (匹配到格式: '{matched_format_key}')")
+            json_path = format_map[matched_format_key]
+            pdf_path = os.path.join(USER_INPUT_DIR, pdf_filename)
+
+            pdf_output_subdir = os.path.join(OUTPUT_DIR, pdf_base_name)
+            os.makedirs(pdf_output_subdir, exist_ok=True)
+            print(f"  - 已為檔案 '{pdf_filename}' 建立輸出子目錄: {pdf_output_subdir}")
+
+            doc = None # Initialize doc to None
+            try:
+                # Read JSON configuration
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+
+                doc = fitz.open(pdf_path) # Open the PDF document
+                if not doc.page_count > 0:
+                    print("  - 警告: PDF 為空，無法處理。")
+                    continue # Skip to next PDF
+
+                # --- Action 1: Resize based on width/height (always from the first page) ---
+                max_width = config.get('width')
+                max_height = config.get('height')
+                
+                if max_width and max_height:
+                    first_page = doc[0]
+                    # Render first page at a higher DPI for better quality
+                    pix_first_page = first_page.get_pixmap(dpi=200) 
+                    original_image_p1 = Image.frombytes("RGB", [pix_first_page.width, pix_first_page.height], pix_first_page.samples)
+                    
+                    resized_image = original_image_p1.copy()
+                    resized_image.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+                    
+                    resized_filename = f"{pdf_base_name}_resized.png"
+                    resized_path = os.path.join(pdf_output_subdir, resized_filename)
+                    resized_image.save(resized_path)
+                    print(f"  - 已儲存縮放後的圖片 (第一頁): {resized_filename}")
+                else:
+                    print("  - 警告: JSON 中缺少 'width' 或 'height' 設定，跳過第一頁縮放。")
+
+                # --- Action 2: Crop based on hints (page-specific) ---
+                if 'hints' in config and isinstance(config['hints'], list):
+                    for hint in config['hints']:
+                        page_num = hint.get('page')
+                        field_name = hint.get('field')
+                        bbox = hint.get('bbox')
+
+                        # Validate hint structure
+                        if not (page_num and field_name and bbox and isinstance(page_num, int) and page_num > 0):
+                            print(f"  - 警告: 'hints' 中的項目格式不正確或缺少 'page'/'field'/'bbox'。跳過此 hint。")
+                            continue
+                        
+                        # Check if page number is valid for the current PDF
+                        if page_num > doc.page_count:
+                            print(f"  - 警告: hint 指定的頁面 {page_num} 超出 PDF 總頁數 {doc.page_count}。跳過此 hint。")
+                            continue
+
+                        # Get the specific page and convert to a Pillow Image
+                        target_page = doc[page_num - 1] # PyMuPDF is 0-indexed
+                        pix_target_page = target_page.get_pixmap(dpi=200) # Render at higher DPI
+                        image_to_crop = Image.frombytes("RGB", [pix_target_page.width, pix_target_page.height], pix_target_page.samples)
+
+                        # Validate bbox coordinates (expecting an array [x, y, w, h])
+                        if not (isinstance(bbox, list) and len(bbox) == 4):
+                            print(f"  - 警告: field '{field_name}' 的 bbox 格式不正確，預期為 [x, y, w, h] 陣列。跳過切割。")
+                            continue
+
+                        x, y, w, h = bbox[0], bbox[1], bbox[2], bbox[3]
+                        
+                        # The crop box is a tuple of (left, upper, right, lower)
+                        crop_box = (x, y, x + w, y + h)
+                        
+                        # Ensure crop box is within image bounds
+                        if crop_box[0] < 0 or crop_box[1] < 0 or crop_box[2] > image_to_crop.width or crop_box[3] > image_to_crop.height:
+                            print(f"  - 警告: field '{field_name}' 的 bbox ({x},{y},{w},{h}) 超出頁面 {page_num} 的圖片範圍 ({image_to_crop.width}x{image_to_crop.height})，跳過切割。")
+                            continue
+
+                        cropped_image = image_to_crop.crop(crop_box)
+                        
+                        cropped_filename = f"{field_name}.png"
+                        cropped_path = os.path.join(pdf_output_subdir, cropped_filename)
+                        cropped_image.save(cropped_path)
+                        print(f"  - 已切割並儲存 (頁面 {page_num}, 欄位 '{field_name}'): {cropped_filename}")
+                else:
+                    print("  - 警告: JSON 中沒有 'hints' 列表或其為空，跳過圖片切割。")
+                
+            except Exception as e:
+                print(f"  - 處理檔案 '{pdf_filename}' 時發生錯誤: {e}")
+            finally:
+                if doc: # Ensure doc is closed if it was opened
+                    doc.close()
+        else:
+            print(f"\n- 檔案 '{pdf_filename}' 未匹配到任何格式，已跳過。")
+
+
+    print("\n--- 圖片處理完成，開始呼叫 Azure OpenAI ---")
+
+    # Initialize Azure OpenAI client
+    client = AzureOpenAI(
+        api_key=AZURE_OPENAI_API_KEY,
+        api_version=AZURE_OPENAI_API_VERSION,
+        azure_endpoint=AZURE_OPENAI_ENDPOINT
+    )
+    system_prompt_aoai_path = os.path.join(PROMPT_DIR, "prompt_system_using_label.txt")
+    system_prompt_aoai = read_prompt_file(system_prompt_aoai_path)
+
+    if not system_prompt_aoai:
+        print(f"錯誤：找不到或無法讀取 Azure OpenAI 的系統提示檔案 {system_prompt_aoai_path}，程式終止。")
+        return
+
+    # Iterate through the created output subdirectories to send images to AOAI
+    processed_doc_dirs = [d for d in os.listdir(OUTPUT_DIR) if os.path.isdir(os.path.join(OUTPUT_DIR, d)) and d != "excel"]
+    if not processed_doc_dirs:
+        print(f"在 {OUTPUT_DIR} 中找不到任何已處理的文件子目錄。")
+        return
+
+    for doc_dir_name in processed_doc_dirs:
+        doc_output_path = os.path.join(OUTPUT_DIR, doc_dir_name)
+        print(f"--- 正在為文件 '{doc_dir_name}' 準備 Azure OpenAI 請求 ---")
+
+        # Collect all PNG images in the subdirectory
+        image_files = [f for f in os.listdir(doc_output_path) if f.lower().endswith(".png")]
+        if not image_files:
+            print(f"  - 在 '{doc_output_path}' 中找不到任何圖片檔案，跳過 Azure OpenAI 請求。")
+            continue
+
+        base64_images_for_aoai = []
+        for img_file in image_files:
+            img_path = os.path.join(doc_output_path, img_file)
+            base64_img = image_file_to_base64(img_path)
+            if base64_img:
+                base64_images_for_aoai.append(base64_img)
+        
+        if not base64_images_for_aoai:
+            print(f"  - 無法編碼 '{doc_output_path}' 中的任何圖片，跳過 Azure OpenAI 請求。")
+            continue
+
+        # Construct user content for OpenAI call
+        user_content_aoai = [{"type": "text", "text": "請根據提供的圖片，提取所有相關資訊，並以 JSON 格式回應。"}]
+        user_content_aoai.extend([{"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img}"}} for img in base64_images_for_aoai])
+
+        try:
+            print(f"  - 正在向 Azure OpenAI 發送請求 ({len(base64_images_for_aoai)} 張圖片)... ")
+            response = client.chat.completions.create(
+                model=AZURE_OPENAI_DEPLOYMENT_NAME,
+                messages=[
+                    {"role": "system", "content": system_prompt_aoai},
+                    {"role": "user", "content": user_content_aoai}
+                ],
+                max_tokens=4096, temperature=0.1, top_p=0.95, response_format={"type": "json_object"}
+            )
+            aoai_json_response = json.loads(response.choices[0].message.content)
+            print("  - 成功收到 Azure OpenAI 回應。")
+
+            # Save the response JSON
+            output_json_filename = f"{doc_dir_name}_with_label.json"
+            output_json_path = os.path.join(doc_output_path, output_json_filename)
+            with open(output_json_path, "w", encoding="utf-8") as f:
+                json.dump(aoai_json_response, f, ensure_ascii=False, indent=4)
+            print(f"  - 已儲存 Azure OpenAI 回應: {output_json_filename}")
+
+        except Exception as e:
+            print(f"  - 呼叫 Azure OpenAI API 或處理回應時發生錯誤: {e}")
+
+    print("\n--- 所有 Azure OpenAI 請求處理完畢 ---")
+
+
 if __name__ == "__main__":
-    main()
+    # The original main function for Azure OpenAI processing is preserved.
+    # To run it, you can call method_purellm() here.
+    # method_purellm() 
+
+    # The new function for image processing is called here.
+    method_llm_with_label()
+    print("\n--- 圖片處理任務完成 ---")

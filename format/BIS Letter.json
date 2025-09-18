@@ -1,0 +1,25 @@
+{
+  "version": "1.0",
+  "prompt_file": "prompt_target_v0.1.md",
+  "width": 1654,
+  "height": 2339,
+  "page_indexing": "absolute_1_based",
+  "bbox_spec": {
+    "units": "px",
+    "origin": "top_left",
+    "format": "xywh"
+  },
+  "hints": [
+    {
+      "field": "model_name",
+      "page": 1,
+      "bbox": [
+        415,
+        1065,
+        317,
+        49
+      ]
+    }
+  ],
+  "spec_name": "BIS Letter.md"
+}

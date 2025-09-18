@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "prompt_file": "prompt_target_v0.1.md",
+  "width": 1700,
+  "height": 2200,
+  "page_indexing": "absolute_1_based",
+  "bbox_spec": {
+    "units": "px",
+    "origin": "top_left",
+    "format": "xywh"
+  },
+  "hints": [
+    {
+      "field": "model_name",
+      "page": 9,
+      "bbox": [
+        488,
+        1348,
+        289,
+        46
+      ]
+    },
+    {
+      "field": "nominal_voltage_v",
+      "page": 9,
+      "bbox": [
+        692,
+        1389,
+        154,
+        41
+      ]
+    },
+    {
+      "field": "rated_capacity_mah",
+      "page": 9,
+      "bbox": [
+        681,
+        1416,
+        156,
+        39
+      ]
+    }
+  ],
+  "spec_name": "BIS Report.md"
+}
